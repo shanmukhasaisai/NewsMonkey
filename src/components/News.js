@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import NewsItem from "./NewsItem";
 import Spinner from "./Spinner";
 import PropTypes from "prop-types";
+import InfiniteScroll from "react-infinite-scroll-component";
+
 
 export default class News extends Component {
 	static defaultProps = {
@@ -14,16 +16,27 @@ export default class News extends Component {
 		pageSize: PropTypes.number,
 		category: PropTypes.string,
 	};
-	constructor() {
-		super();
+	constructor(props) {
+		super(props);
 		this.state = {
 			articles: [],
-			loading: false,
+			loading: true,
 			page: 1,
+			totalResults:0,
 		};
+		document.title=`NewsMonkey - ${this.capitalize(this.props.category)}`
 	}
-	async componentDidMount() {
-		let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=6f24d4fdace2445fa3ec2caaa8e33043&page=1&pageSize=${this.props.pageSize}`;
+	capitalize=(string)=>{
+		return string.charAt(0).toUpperCase()+string.slice(1);
+	}
+	async updateNews(){
+		const url = `https://newsapi.org/v2/top-headlines?country=${
+			this.props.country
+		}&category=${
+			this.props.category
+		}&apiKey=6f24d4fdace2445fa3ec2caaa8e33043&page=${
+			this.state.page
+		}&pageSize=${this.props.pageSize}`;
 		this.setState({ loading: true });
 		let data = await fetch(url);
 		let parsedData = await data.json();
@@ -32,6 +45,18 @@ export default class News extends Component {
 			totalResults: parsedData.totalResults,
 			loading: false,
 		});
+	}
+	async componentDidMount() {
+		let url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=6f24d4fdace2445fa3ec2caaa8e33043&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+		this.setState({ loading: true });
+		let data = await fetch(url);
+		let parsedData = await data.json();
+		this.setState({
+			articles: parsedData.articles,
+			totalResults: parsedData.totalResults,
+			loading: false,
+		});
+		// this.updateNews();
 	}
 	handleNextClick = async () => {
 		if (
@@ -54,36 +79,67 @@ export default class News extends Component {
 				page: this.state.page + 1,
 				articles: parsedData.articles,
 				loading: false,
+				totalResults: parsedData.totalResults,
 			});
 		}
+		// this.setState({page: this.state.page+1});
+		// this.updateNews();
 	};
 	handlePreClick = async () => {
-		let url = `https://newsapi.org/v2/top-headlines?country=${
+		// let url = `https://newsapi.org/v2/top-headlines?country=${
+		// 	this.props.country
+		// }&category=${
+		// 	this.props.category
+		// }&apiKey=6f24d4fdace2445fa3ec2caaa8e33043&page=${
+		// 	this.state.page - 1
+		// }&pageSize=${this.props.pageSize}`;
+		// this.setState({ loading: true });
+		// let data = await fetch(url);
+		// let parsedData = await data.json();
+		// this.setState({
+		// 	page: this.state.page - 1,
+		// 	articles: parsedData.articles,
+		// 	loading: false,
+		// });
+		this.setState({page:this.state.page-1});
+		this.updateNews();
+	};
+	fetchMoreData=async()=>{
+		this.setState({
+			page: this.state.page+1,
+		})
+		const url = `https://newsapi.org/v2/top-headlines?country=${
 			this.props.country
 		}&category=${
 			this.props.category
 		}&apiKey=6f24d4fdace2445fa3ec2caaa8e33043&page=${
-			this.state.page - 1
+			this.state.page
 		}&pageSize=${this.props.pageSize}`;
 		this.setState({ loading: true });
 		let data = await fetch(url);
 		let parsedData = await data.json();
 		this.setState({
-			page: this.state.page - 1,
-			articles: parsedData.articles,
-			loading: false,
+			articles: this.state.articles.concat(parsedData.articles),
 		});
-	};
+	}
+
 
 	render() {
 		return (
-			<div className="container my-3">
+			<>
 				<h1 className="text-center" style={{ margin: "40px 0px" }}>
-					NewsMonkey - Top Headlines
+					NewsMonkey - Top {this.capitalize(this.props.category)} Headlines
 				</h1>
 				{this.state.loading && <Spinner />}
-				<div className="row">
-					{!this.state.loading &&
+				<InfiniteScroll
+          dataLength={this.state.articles.length}
+          next={this.fetchMoreData}
+          hasMore={this.state.articles.length !== this.state.totalResults}
+          loader={<Spinner/>}
+        >
+				<div className="container">
+					<div className="row">
+					{
 						this.state.articles.map(ele => {
 							return (
 								<div className="col-md-4" key={ele.url}>
@@ -98,12 +154,17 @@ export default class News extends Component {
 												: "https://imgeng.jagran.com/images/2023/dec/free-fire-max-redeem-codes-2023-india-today1703395333665.jpg"
 										}
 										newsUrl={ele.url}
+										publishTime={ele.publishedAt}
+										author={ele.author}
 									/>
 								</div>
 							);
 						})}
 				</div>
-				<div className="container d-flex justify-content-between">
+				</div>
+				
+				</InfiniteScroll>
+				{/* <div className="container d-flex justify-content-between">
 					<button
 						disabled={this.state.page <= 1}
 						type="button"
@@ -124,8 +185,8 @@ export default class News extends Component {
 					>
 						Next &rarr;
 					</button>
-				</div>
-			</div>
+				</div> */}
+			</>
 		);
 	}
 }

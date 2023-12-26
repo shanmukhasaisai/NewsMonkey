@@ -3,8 +3,8 @@ import Loading from "./loading.gif";
 export default class Spinner extends Component {
 	render() {
 		return (
-			<div className="text-center">
-				<img src={Loading} alt="loading please wait..." />
+			<div className="text-center ">
+				<img className="my-3" src={Loading} alt="loading please wait..." />
 			</div>
 		);
 	}
